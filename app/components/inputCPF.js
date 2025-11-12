@@ -1,6 +1,10 @@
 import React from 'react';
-import { View, StyleSheet, Text } from 'react-native';
-import TextInputMask from 'react-native-text-input-mask';
+import { StyleSheet } from 'react-native';
+// Importa a biblioteca de máscara 100% JS, compatível com Expo Go
+import MaskInput from 'react-native-mask-input';
+
+// Define a máscara de CPF
+const MASCARA_CPF = [/\d/, /\d/, /\d/, '.', /\d/, /\d/, /\d/, '.', /\d/, /\d/, /\d/, '-', /\d/, /\d/];
 
 /**
  * Um componente de input customizado com máscara de CPF.
@@ -9,32 +13,28 @@ import TextInputMask from 'react-native-text-input-mask';
  * @param {string} props.value - O valor atual do CPF.
  * @param {function(string): void} props.onChangeText - Função chamada quando o texto muda.
  * @param {string} [props.placeholder] - O texto do placeholder.
- * @param {object} [props.style] - Estilos customizados para o container.
- * @param {object} [props.inputStyle] - Estilos customizados para o input.
+ * @param {object} [props.style] - Estilos customizados para o input.
  */
-const InputCPF = ({ value, onChangeText, placeholder = "000.000.000-00"}) => {
+const InputCPF = ({ value, onChangeText, placeholder = "000.000.000-00", ...rest }) => {
     return (
-        <View style={styles.container}>
-            <TextInputMask
-                style={styles.input}
-                value={value}
-                onChangeText={onChangeText}
-                // A máscara para CPF
-                mask={"[000].[000].[000]-[00]"}
-                // Define o tipo de teclado para numérico
-                keyboardType="numeric"
-                placeholder={placeholder}
-                placeholderTextColor="#999"
-            />
-        </View>
+        <MaskInput
+            style={styles.input}
+            value={value}
+            // A props do MaskInput retorna (masked, unmasked)
+            // Passamos apenas o 'masked' (texto com máscara) para o formulário
+            onChangeText={(masked, unmasked) => {
+                onChangeText(masked);
+            }}
+            mask={MASCARA_CPF}
+            placeholder={placeholder}
+            placeholderTextColor="#999"
+            keyboardType="numeric"
+            {...rest}
+        />
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        width: '100%',
-        marginBottom: 15,
-    },
     input: {
         height: 50,
         width: '100%',
@@ -44,6 +44,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 15,
         fontSize: 16,
         backgroundColor: '#fff',
+        marginBottom: 15,
+        color: '#333', // Adicionado para melhor legibilidade
     },
 });
 

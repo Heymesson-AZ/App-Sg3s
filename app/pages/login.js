@@ -5,30 +5,78 @@ import {
   StyleSheet,
   Image,
   TouchableOpacity,
-  SafeAreaView,
   KeyboardAvoidingView,
+  Platform,
+  Alert, // Importar Alert
+  ActivityIndicator, // Importar ActivityIndicator
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-// componentes
+import axios from 'axios'; // Importar axios
+
 import InputCPF from '../components/inputCPF';
 import InputSenha from '../components/inputSenha';
 
-export default function Login() {
+// URL da sua API de Login
+const API_URL = 'https://sg3s.tds104-senac.online/api_app/apiLogin.php';
+
+export default function Login({ navigation }) {
   const [cpf, setCpf] = useState('');
   const [senha, setSenha] = useState('');
+  // Estado para controlar o loading
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    // Lógica para enviar CPF e Senha
-    console.log('CPF:', cpf);
-    console.log('Senha:', senha);
-    alert('Tentando fazer login com CPF: ' + cpf + ' e Senha: ' + senha);
-    // Aqui você faria sua chamada de API de login
+  // Converte a função para async para usar o axios
+  const handleLogin = async () => {
+    if (loading) return; // Impede cliques múltiplos
+
+    // Validação simples (pode melhorar)
+    if (!cpf || !senha) {
+      Alert.alert('Erro', 'Por favor, preencha o CPF e a senha.');
+      return;
+    }
+
+    setLoading(true); // Inicia o loading
+
+    // FormData é um formato comum que APIs PHP entendem
+    const formData = new FormData();
+    formData.append('cpf', cpf);
+    formData.append('senha', senha);
+
+    try {
+      // Faz a chamada POST para a API
+      const response = await axios.post(API_URL, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      // Verifica a resposta da API
+      if (response.data && response.data.status === 'sucesso') {
+        // Sucesso!
+        console.log('Login bem-sucedido:', response.data);
+
+        // Navega para a Home (e remove o Login da pilha)
+        navigation.replace('Home');
+
+      } else {
+        // Erro vindo da API (ex: CPF/Senha errados)
+        Alert.alert('Erro de Login', response.data.mensagem || 'CPF ou senha inválidos.');
+      }
+
+    } catch (error) {
+      Alert.alert('Erro de Conexão', 'Não foi possível conectar ao servidor. Tente novamente.');
+    } finally {
+      // Para o loading, independente de sucesso ou erro
+      setLoading(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.header}>
           <Image
@@ -41,27 +89,36 @@ export default function Login() {
         <View style={styles.card}>
           <Text style={styles.label}>Usuário</Text>
           <View style={styles.inputIconContainer}>
-            {/* Ícone de usuário para o campo CPF */}
             <Ionicons name="person-outline" size={24} color="#888" style={styles.inputPrefixIcon} />
             <InputCPF
               value={cpf}
               onChangeText={setCpf}
               placeholder="Digite seu usuário (CPF)"
-              inputStyle={styles.customInputStyle} // Estilo para o TextInput interno, se precisar
-              style={styles.inputNoBorder} // Remove a borda do InputCPF, pois a borda está no container
+              style={styles.inputNoBorder}
+              editable={!loading} // Desativa input durante o loading
             />
           </View>
 
           <Text style={styles.label}>Senha</Text>
-          {/* InputSenha já tem seu próprio ícone */}
           <InputSenha
             value={senha}
             onChangeText={setSenha}
             placeholder="Digite sua senha"
+            autoCapitalize="none"
+            editable={!loading} // Desativa input durante o loading
           />
 
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginButtonText}>Entrar</Text>
+          {/* Botão de Login com indicador de loading */}
+          <TouchableOpacity
+            style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+            onPress={handleLogin}
+            disabled={loading} // Desativa o botão durante o loading
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.loginButtonText}>Entrar</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -72,7 +129,7 @@ export default function Login() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#3498db', // Cor de fundo azul semelhante à imagem
+    backgroundColor: '#3498db',
   },
   container: {
     flex: 1,
@@ -87,7 +144,7 @@ const styles = StyleSheet.create({
   logo: {
     width: 100,
     height: 100,
-    borderRadius: 50, 
+    borderRadius: 50,
     backgroundColor: '#fff',
     marginBottom: 20,
     borderWidth: 1,
@@ -131,31 +188,36 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#fff',
     marginBottom: 15,
-    height: 50, // Altura padrão para o container
+    height: 50,
   },
   inputPrefixIcon: {
     paddingLeft: 15,
     paddingRight: 10,
   },
-  // Sobrescreve o estilo do InputCPF para remover a borda interna
   inputNoBorder: {
-    borderWidth: 0, // Remove a borda padrão do InputCPF
-    marginBottom: 0, // Remove o margin-bottom padrão
-    height: '100%', // Faz o input preencher a altura do container
-    borderRadius: 0, // Remove o border-radius padrão
-    paddingHorizontal: 0, // Ajusta o padding horizontal
-  },
-  // Opcional: estilo para o TextInput interno do InputCPF se você precisar
-  customInputStyle: {
-    // Exemplo: se quisesse mudar a cor do texto ou fonte
-    // color: 'blue',
+    flex: 1,
+    height: '100%',
+    borderWidth: 0,
+    marginBottom: 0,
+    borderRadius: 0,
+    paddingHorizontal: 0,
+    fontSize: 16,
+    color: '#333',
+    backgroundColor: 'transparent',
   },
   loginButton: {
-    backgroundColor: '#007bff', // Azul do botão
+    backgroundColor: '#007bff',
     paddingVertical: 15,
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 20,
+    height: 50, // Altura fixa para o botão
+    justifyContent: 'center', // Centraliza o ActivityIndicator
+  },
+  // Estilo para o botão quando estiver carregando
+  loginButtonDisabled: {
+    backgroundColor: '#0056b3', // Um azul um pouco mais escuro/opaco
+    opacity: 0.7,
   },
   loginButtonText: {
     color: '#fff',
